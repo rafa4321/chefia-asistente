@@ -29,7 +29,7 @@ app.post('/api/generate-recipe', async (req, res) => {
       throw new Error("La clave GEMINI_API_KEY no está configurada en el servidor.");
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
     
     const result = await model.generateContent(prompt);
     const response = await result.response;
