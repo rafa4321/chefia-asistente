@@ -11,31 +11,34 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 10000;
 
-// CONFIGURACIÓN DE VERTEX AI CON AUTENTICACIÓN DIRECTA
-// Esto evita el error de "Unable to authenticate"
+// --- CONFIGURACIÓN DE SEGURIDAD (CAMINO A) ---
+// Validamos que la variable exista antes de arrancar
+if (!process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+  console.error("ERROR CRÍTICO: No se encontró la variable GOOGLE_APPLICATION_CREDENTIALS_JSON");
+  process.exit(1);
+}
+
+// Parseamos el JSON del pasaporte digital
+const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
+
+// Inicializamos Vertex AI con las credenciales directas
 const vertexAI = new VertexAI({ 
   project: 'chefia-5b6ac', 
-  location: 'us-central1'
+  location: 'us-central1',
+  googleAuthOptions: { credentials } 
 });
 
-// Usamos la API Key para autenticar la petición de forma directa
 const model = vertexAI.getGenerativeModel({
   model: 'gemini-1.5-flash',
-}, {
-  // Aquí es donde sucede la magia para que Render no falle
-  apiEndpoint: 'us-central1-aiplatform.googleapis.com',
 });
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'dist')));
 
+// RUTA DE GENERACIÓN
 app.post('/api/generate-recipe', async (req, res) => {
   try {
     const { prompt } = req.body;
-
-    // IMPORTANTE: Pasamos la API KEY en la petición para que Google nos deje pasar
-    // Asegúrate de tener la variable GEMINI_API_KEY en Render o pégala aquí
-    const apiKey = process.env.GEMINI_API_KEY; 
 
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }]
@@ -47,18 +50,19 @@ app.post('/api/generate-recipe', async (req, res) => {
     res.json({ recipe: text });
 
   } catch (error) {
-    console.error("ERROR CRÍTICO EN CHEFIA:", error.message);
+    console.error("ERROR EN MOTOR VERTEX:", error.message);
     res.status(500).json({ 
-      error: 'Error de comunicación con Google Cloud',
+      error: 'Fallo de autenticación o cuota en Google Cloud',
       details: error.message 
     });
   }
 });
 
+// MANEJO DE FRONTEND
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
 app.listen(port, () => {
-  console.log(`ChefIA lista y autenticada en puerto ${port}`);
+  console.log(`ChefIA operativa bajo el Plan Blaze en puerto ${port}`);
 });
