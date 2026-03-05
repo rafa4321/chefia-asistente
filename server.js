@@ -11,13 +11,13 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 10000;
 
-// Inicialización de Google AI usando la variable de Render
-// Asegúrate de que en Render la variable se llame exactamente GEMINI_API_KEY
+// Inicialización de Google AI
+// Usamos la API Key configurada en Render
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 app.use(express.json());
 
-// Servir archivos estáticos desde la carpeta 'dist' generada por Vite
+// Servir archivos estáticos desde la carpeta 'dist' (Frontend)
 app.use(express.static(path.join(__dirname, 'dist')));
 
 // RUTA CRÍTICA: Generación de recetas
@@ -26,18 +26,26 @@ app.post('/api/generate-recipe', async (req, res) => {
     const { prompt } = req.body;
 
     if (!process.env.GEMINI_API_KEY) {
-      throw new Error("La clave GEMINI_API_KEY no está configurada en el servidor.");
+      throw new Error("La clave GEMINI_API_KEY no está configurada en Render.");
     }
 
-   const model = genAI.getGenerativeModel({ model: "models/gemini-1.5-flash" });
+    // SOLUCIÓN AL ERROR 404: 
+    // Usamos el nombre técnico completo "models/gemini-1.5-flash"
+    // Y forzamos la versión 'v1beta' que es la que muestra actividad en tus gráficos de AI Studio
+    const model = genAI.getGenerativeModel(
+      { model: "models/gemini-1.5-flash" }, 
+      { apiVersion: 'v1beta' }
+    );
     
+    // Configuración de generación para mayor estabilidad
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
 
     res.json({ recipe: text });
+
   } catch (error) {
-    // Este log aparecerá en la pestaña 'Logs' de Render para diagnóstico
+    // Este log es vital para ver el diagnóstico real en la pestaña 'Logs' de Render
     console.error("ERROR DETECTADO EN GOOGLE AI:", error.message);
     
     res.status(500).json({ 
