@@ -12,40 +12,37 @@ const app = express();
 const port = process.env.PORT || 10000;
 
 // Inicialización de Google AI
-// Usamos la API Key configurada en Render
+// Se utiliza la variable GEMINI_API_KEY configurada en los Environment Variables de Render
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 app.use(express.json());
 
-// Servir archivos estáticos desde la carpeta 'dist' (Frontend)
+// Servir archivos estáticos desde la carpeta 'dist' generada por el build de Vite
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// RUTA CRÍTICA: Generación de recetas
+// RUTA PARA GENERAR RECETAS
 app.post('/api/generate-recipe', async (req, res) => {
   try {
     const { prompt } = req.body;
 
     if (!process.env.GEMINI_API_KEY) {
-      throw new Error("La clave GEMINI_API_KEY no está configurada en Render.");
+      throw new Error("La clave GEMINI_API_KEY no está configurada en el servidor.");
     }
 
-    // SOLUCIÓN AL ERROR 404: 
-    // Usamos el nombre técnico completo "models/gemini-1.5-flash"
-    // Y forzamos la versión 'v1beta' que es la que muestra actividad en tus gráficos de AI Studio
-    const model = genAI.getGenerativeModel(
-      { model: "models/gemini-1.5-flash" }, 
-      { apiVersion: 'v1beta' }
-    );
+    // CONFIGURACIÓN DE MÁXIMA COMPATIBILIDAD:
+    // 1. Usamos 'gemini-1.5-flash' que es el estándar actual.
+    // 2. No forzamos versiones de API (v1 o v1beta) para que la librería decida la ruta más estable.
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
-    // Configuración de generación para mayor estabilidad
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
 
+    // Enviamos la respuesta al frontend
     res.json({ recipe: text });
 
   } catch (error) {
-    // Este log es vital para ver el diagnóstico real en la pestaña 'Logs' de Render
+    // Este log es fundamental para el diagnóstico en la pestaña 'Logs' de Render
     console.error("ERROR DETECTADO EN GOOGLE AI:", error.message);
     
     res.status(500).json({ 
@@ -55,7 +52,7 @@ app.post('/api/generate-recipe', async (req, res) => {
   }
 });
 
-// Ruta para manejar el Frontend (SPA)
+// Ruta para manejar el Frontend (Single Page Application)
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
