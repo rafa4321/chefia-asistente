@@ -1,7 +1,0 @@
-{
-  "name": "Remix: ChefIA Pro: Inteligencia Culinaria",
-  "description": "Transforma tus ingredientes en platos gourmet con IA. Escanea con tu cámara, recibe recetas personalizadas según tu región y dieta, y comparte tarjetas de cocina profesionales. Tu MVP culinario definitivo.",
-  "requestFramePermissions": [
-    "camera"
-  ]
-}

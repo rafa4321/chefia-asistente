@@ -1,23 +1,32 @@
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { VertexAI } from '@google-cloud/vertexai';
 import dotenv from 'dotenv';
 
-// Configuración de rutas y variables de entorno
 dotenv.config();
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 10000;
 
-// Inicialización de Google AI
-// Se utiliza la variable GEMINI_API_KEY configurada en los Environment Variables de Render
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// CONFIGURACIÓN PROFESIONAL DE GOOGLE CLOUD VERTEX AI
+// Usamos tu ID de proyecto confirmado en las capturas
+const project = 'chefia-5b6ac';
+const location = 'us-central1'; // Región recomendada para estabilidad
+
+// Inicializamos la IA con la infraestructura de producción
+const vertexAI = new VertexAI({ project: project, location: location });
+
+// Definimos el modelo estable (Sin rutas beta que causen error 404)
+const model = vertexAI.getGenerativeModel({
+  model: 'gemini-1.5-flash',
+});
 
 app.use(express.json());
 
-// Servir archivos estáticos desde la carpeta 'dist' generada por el build de Vite
+// Servir frontend
 app.use(express.static(path.join(__dirname, 'dist')));
 
 // RUTA PARA GENERAR RECETAS
@@ -25,38 +34,31 @@ app.post('/api/generate-recipe', async (req, res) => {
   try {
     const { prompt } = req.body;
 
-    if (!process.env.GEMINI_API_KEY) {
-      throw new Error("La clave GEMINI_API_KEY no está configurada en el servidor.");
-    }
-
-    // CONFIGURACIÓN DE MÁXIMA COMPATIBILIDAD:
-    // 1. Usamos 'gemini-1.5-flash' que es el estándar actual.
-    // 2. No forzamos versiones de API (v1 o v1beta) para que la librería decida la ruta más estable.
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }, { apiVersion: 'v1' });
-    
+    // Llamada al motor de Google Cloud
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const text = response.text();
+    
+    // Nueva estructura de respuesta de Vertex AI
+    const text = response.candidates[0].content.parts[0].text;
 
-    // Enviamos la respuesta al frontend
     res.json({ recipe: text });
 
   } catch (error) {
-    // Este log es fundamental para el diagnóstico en la pestaña 'Logs' de Render
-    console.error("ERROR DETECTADO EN GOOGLE AI:", error.message);
+    // Log crítico para ver en el dashboard de Render
+    console.error("ERROR EN MOTOR CHEFIA:", error.message);
     
     res.status(500).json({ 
-      error: 'Error en el servidor al conectar con la IA',
+      error: 'Error de conexión con la infraestructura de Google',
       details: error.message 
     });
   }
 });
 
-// Ruta para manejar el Frontend (Single Page Application)
+// Manejo de rutas Frontend (SPA)
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
 app.listen(port, () => {
-  console.log(`Servidor activo en puerto ${port}`);
+  console.log(`ChefIA conectada a Google Cloud en puerto ${port}`);
 });
