@@ -32,7 +32,7 @@ app.post('/api/generate-recipe', async (req, res) => {
     // CONFIGURACIÓN DE MÁXIMA COMPATIBILIDAD:
     // 1. Usamos 'gemini-1.5-flash' que es el estándar actual.
     // 2. No forzamos versiones de API (v1 o v1beta) para que la librería decida la ruta más estable.
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }, { apiVersion: 'v1' });
     
     const result = await model.generateContent(prompt);
     const response = await result.response;
