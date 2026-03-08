@@ -22,7 +22,7 @@ const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
 // Inicializamos Vertex AI con la ubicación exacta
 const vertexAI = new VertexAI({ 
   project: 'chefia-5b6ac', 
-  location: 'us-central1', // Asegúrate de que esta sea la región de tu proyecto
+  location: 'us-east1', // Asegúrate de que esta sea la región de tu proyecto
   googleAuthOptions: { credentials } 
 });
 
