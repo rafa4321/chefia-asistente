@@ -11,7 +11,6 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 10000;
 
-// Configuración de credenciales desde las variables de entorno de Render
 const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
 
 const vertexAI = new VertexAI({ 
@@ -20,9 +19,12 @@ const vertexAI = new VertexAI({
   googleAuthOptions: { credentials } 
 });
 
-// Usamos el modelo exacto que vimos en tu Vertex AI Studio
 const model = vertexAI.getGenerativeModel({
-  model: 'gemini-2.0-flash-lite-001', 
+  model: 'gemini-2.0-flash-lite-001',
+  // INSTRUCCIONES DE SISTEMA PARA RECUPERAR LA IDENTIDAD
+  systemInstruction: {
+    parts: [{ text: "Eres ChefIA, un asistente culinario experto. Tu objetivo es proporcionar recetas detalladas, consejos de cocina y gestión de ingredientes. DEBES responder SIEMPRE en español, de forma amable y profesional." }]
+  }
 });
 
 app.use(express.json());
@@ -31,21 +33,20 @@ app.use(express.static(path.join(__dirname, 'dist')));
 app.post('/api/generate-recipe', async (req, res) => {
   try {
     const { prompt } = req.body;
+    // Reforzamos la instrucción de idioma en cada consulta
+    const fullPrompt = `Instrucción: Responde estrictamente en español. Consulta: ${prompt}`;
+
     const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }]
+      contents: [{ role: 'user', parts: [{ text: fullPrompt }] }]
     });
 
     const response = await result.response;
-    // Respuesta segura para evitar errores en el frontend
     const text = response.candidates[0].content.parts[0].text;
     res.json({ recipe: text });
 
   } catch (error) {
-    console.error("ERROR EN MOTOR VERTEX:", error.message);
-    res.status(500).json({ 
-      error: 'Error en el modelo de Google Cloud',
-      details: error.message 
-    });
+    console.error("ERROR VERTEX:", error.message);
+    res.status(500).json({ error: 'Error al conectar con ChefIA' });
   }
 });
 
@@ -54,5 +55,5 @@ app.get('*', (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`ChefIA operativa con Gemini 2.0 en puerto ${port}`);
+  console.log(`ChefIA (Español) operativa en puerto ${port}`);
 });
