@@ -11,7 +11,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 10000;
 
-// Configuración de Seguridad
+// Configuración de credenciales desde las variables de entorno de Render
 const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
 
 const vertexAI = new VertexAI({ 
@@ -20,7 +20,7 @@ const vertexAI = new VertexAI({
   googleAuthOptions: { credentials } 
 });
 
-// Modelo 2.0 Flash Lite (el que activamos en el Studio)
+// Usamos el modelo exacto que vimos en tu Vertex AI Studio
 const model = vertexAI.getGenerativeModel({
   model: 'gemini-2.0-flash-lite-001', 
 });
@@ -28,24 +28,24 @@ const model = vertexAI.getGenerativeModel({
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// Ruta de generación de recetas
 app.post('/api/generate-recipe', async (req, res) => {
   try {
     const { prompt } = req.body;
-
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }]
     });
 
     const response = await result.response;
-    // Extraemos el texto de forma segura
-    const recipeText = response.candidates[0].content.parts[0].text;
-
-    res.json({ recipe: recipeText });
+    // Respuesta segura para evitar errores en el frontend
+    const text = response.candidates[0].content.parts[0].text;
+    res.json({ recipe: text });
 
   } catch (error) {
-    console.error("ERROR VERTEX:", error.message);
-    res.status(500).json({ error: 'Error al conectar con la IA' });
+    console.error("ERROR EN MOTOR VERTEX:", error.message);
+    res.status(500).json({ 
+      error: 'Error en el modelo de Google Cloud',
+      details: error.message 
+    });
   }
 });
 
@@ -54,5 +54,5 @@ app.get('*', (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`Servidor activo con Gemini 2.0 en puerto ${port}`);
+  console.log(`ChefIA operativa con Gemini 2.0 en puerto ${port}`);
 });
