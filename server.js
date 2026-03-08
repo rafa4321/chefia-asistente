@@ -11,18 +11,18 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 10000;
 
-// Configuración de Seguridad
 const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
 
+// Configuración con la región us-east1 confirmada en tu consola
 const vertexAI = new VertexAI({ 
   project: 'chefia-5b6ac', 
-  location: 'us-east1', // Región confirmada en tu captura
+  location: 'us-east1', 
   googleAuthOptions: { credentials } 
 });
 
-// Usamos el nombre base sin versiones extra
+// USAMOS EL MODELO QUE TIENES ABIERTO EN LA CAPTURA
 const model = vertexAI.getGenerativeModel({
-  model: 'gemini-1.5-flash', 
+  model: 'gemini-2.0-flash-lite-001', 
 });
 
 app.use(express.json());
@@ -47,5 +47,5 @@ app.get('*', (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`Servidor en puerto ${port}`);
+  console.log(`Servidor activo con Gemini 2.0 en puerto ${port}`);
 });
