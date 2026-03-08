@@ -11,16 +11,16 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 10000;
 
+// Configuración de Seguridad
 const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
 
-// Configuración con la región us-east1 confirmada en tu consola
 const vertexAI = new VertexAI({ 
   project: 'chefia-5b6ac', 
   location: 'us-east1', 
   googleAuthOptions: { credentials } 
 });
 
-// USAMOS EL MODELO QUE TIENES ABIERTO EN LA CAPTURA
+// Modelo 2.0 Flash Lite (el que activamos en el Studio)
 const model = vertexAI.getGenerativeModel({
   model: 'gemini-2.0-flash-lite-001', 
 });
@@ -28,17 +28,24 @@ const model = vertexAI.getGenerativeModel({
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'dist')));
 
+// Ruta de generación de recetas
 app.post('/api/generate-recipe', async (req, res) => {
   try {
     const { prompt } = req.body;
+
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }]
     });
+
     const response = await result.response;
-    res.json({ recipe: response.candidates[0].content.parts[0].text });
+    // Extraemos el texto de forma segura
+    const recipeText = response.candidates[0].content.parts[0].text;
+
+    res.json({ recipe: recipeText });
+
   } catch (error) {
     console.error("ERROR VERTEX:", error.message);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Error al conectar con la IA' });
   }
 });
 
