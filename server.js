@@ -14,12 +14,17 @@ const port = process.env.PORT || 10000;
 const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
 const vertexAI = new VertexAI({ project: 'chefia-5b6ac', location: 'us-east1', googleAuthOptions: { credentials } });
 
-// Usamos el modelo 2.0 que ya tienes configurado
-const model = vertexAI.getGenerativeModel({
+// Modelo para TEXTO: Gemini 2.0 Flash Lite
+const textModel = vertexAI.getGenerativeModel({
   model: 'gemini-2.0-flash-lite-001',
   systemInstruction: {
-    parts: [{ text: "Eres ChefIA, el asistente experto en inteligencia culinaria de Rafael. Tu tono es profesional, amable y apasionado por la cocina. DEBES responder SIEMPRE en español. Estructura tus recetas con: Introducción, Ingredientes (lista numerada), Preparación y Consejos del Chef." }]
+    parts: [{ text: "Eres ChefIA, asistente de Rafael. Responde SIEMPRE en español. Estructura: Saludo, Ingredientes y Preparación." }]
   }
+});
+
+// Modelo para IMAGEN: Gemini 3.1 Flash Image Preview
+const imageModel = vertexAI.getGenerativeModel({
+  model: 'gemini-3.1-flash-image-preview',
 });
 
 app.use(express.json());
@@ -28,14 +33,26 @@ app.use(express.static(path.join(__dirname, 'dist')));
 app.post('/api/generate-recipe', async (req, res) => {
   try {
     const { prompt } = req.body;
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: `Como ChefIA, ayúdame con esto en español: ${prompt}` }] }]
+
+    // Generamos ambos contenidos en paralelo para ahorrar tiempo
+    const [textResult, imageResult] = await Promise.all([
+      textModel.generateContent({ contents: [{ role: 'user', parts: [{ text: prompt }] }] }),
+      imageModel.generateContent({ 
+        contents: [{ role: 'user', parts: [{ text: `Professional food photography of ${prompt}, high resolution, delicious.` }] }] 
+      })
+    ]);
+
+    const recipeText = textResult.response.candidates[0].content.parts[0].text;
+    const imageData = imageResult.response.candidates[0].content.parts[0].inlineData.data;
+
+    res.json({ 
+      recipe: recipeText, 
+      image: `data:image/png;base64,${imageData}` 
     });
 
-    const response = await result.response;
-    res.json({ recipe: response.candidates[0].content.parts[0].text });
   } catch (error) {
-    res.status(500).json({ error: 'Error en la conexión culinaria' });
+    console.error("Error:", error);
+    res.status(500).json({ error: 'Error en la generación' });
   }
 });
 
@@ -43,6 +60,4 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
-app.listen(port, () => {
-  console.log(`ChefIA restaurada en puerto ${port}`);
-});
+app.listen(port, () => console.log(`ChefIA Multimodal en puerto ${port}`));
