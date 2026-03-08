@@ -12,24 +12,23 @@ const app = express();
 const port = process.env.PORT || 10000;
 
 // --- CONFIGURACIÓN DE SEGURIDAD (CAMINO A) ---
-// Validamos que la variable exista antes de arrancar
 if (!process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
   console.error("ERROR CRÍTICO: No se encontró la variable GOOGLE_APPLICATION_CREDENTIALS_JSON");
   process.exit(1);
 }
 
-// Parseamos el JSON del pasaporte digital
 const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
 
-// Inicializamos Vertex AI con las credenciales directas
+// Inicializamos Vertex AI con la ubicación exacta
 const vertexAI = new VertexAI({ 
   project: 'chefia-5b6ac', 
-  location: 'us-central1',
+  location: 'us-central1', // Asegúrate de que esta sea la región de tu proyecto
   googleAuthOptions: { credentials } 
 });
 
+// Usamos el nombre de modelo específico para evitar el error 404
 const model = vertexAI.getGenerativeModel({
-  model: 'gemini-1.5-flash',
+  model: 'gemini-1.5-flash-001', 
 });
 
 app.use(express.json());
@@ -52,7 +51,7 @@ app.post('/api/generate-recipe', async (req, res) => {
   } catch (error) {
     console.error("ERROR EN MOTOR VERTEX:", error.message);
     res.status(500).json({ 
-      error: 'Fallo de autenticación o cuota en Google Cloud',
+      error: 'Error en el modelo de Google Cloud',
       details: error.message 
     });
   }
