@@ -12,18 +12,13 @@ const app = express();
 const port = process.env.PORT || 10000;
 
 const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
+const vertexAI = new VertexAI({ project: 'chefia-5b6ac', location: 'us-east1', googleAuthOptions: { credentials } });
 
-const vertexAI = new VertexAI({ 
-  project: 'chefia-5b6ac', 
-  location: 'us-east1', 
-  googleAuthOptions: { credentials } 
-});
-
+// Usamos el modelo 2.0 que ya tienes configurado
 const model = vertexAI.getGenerativeModel({
   model: 'gemini-2.0-flash-lite-001',
-  // INSTRUCCIONES DE SISTEMA PARA RECUPERAR LA IDENTIDAD
   systemInstruction: {
-    parts: [{ text: "Eres ChefIA, un asistente culinario experto. Tu objetivo es proporcionar recetas detalladas, consejos de cocina y gestión de ingredientes. DEBES responder SIEMPRE en español, de forma amable y profesional." }]
+    parts: [{ text: "Eres ChefIA, el asistente experto en inteligencia culinaria de Rafael. Tu tono es profesional, amable y apasionado por la cocina. DEBES responder SIEMPRE en español. Estructura tus recetas con: Introducción, Ingredientes (lista numerada), Preparación y Consejos del Chef." }]
   }
 });
 
@@ -33,20 +28,14 @@ app.use(express.static(path.join(__dirname, 'dist')));
 app.post('/api/generate-recipe', async (req, res) => {
   try {
     const { prompt } = req.body;
-    // Reforzamos la instrucción de idioma en cada consulta
-    const fullPrompt = `Instrucción: Responde estrictamente en español. Consulta: ${prompt}`;
-
     const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: fullPrompt }] }]
+      contents: [{ role: 'user', parts: [{ text: `Como ChefIA, ayúdame con esto en español: ${prompt}` }] }]
     });
 
     const response = await result.response;
-    const text = response.candidates[0].content.parts[0].text;
-    res.json({ recipe: text });
-
+    res.json({ recipe: response.candidates[0].content.parts[0].text });
   } catch (error) {
-    console.error("ERROR VERTEX:", error.message);
-    res.status(500).json({ error: 'Error al conectar con ChefIA' });
+    res.status(500).json({ error: 'Error en la conexión culinaria' });
   }
 });
 
@@ -55,5 +44,5 @@ app.get('*', (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`ChefIA (Español) operativa en puerto ${port}`);
+  console.log(`ChefIA restaurada en puerto ${port}`);
 });

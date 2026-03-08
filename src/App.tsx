@@ -9,64 +9,59 @@ function App() {
   const generateRecipe = async () => {
     if (!prompt) return;
     setLoading(true);
-    setRecipe(''); 
-
     try {
       const response = await fetch('/api/generate-recipe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt }),
       });
-
       const data = await response.json();
-
       if (data && data.recipe) {
-        // Limpieza de símbolos manteniendo la estructura
-        const cleanRecipe = data.recipe.replace(/[*#]/g, '');
-        setRecipe(cleanRecipe);
-      } else {
-        setRecipe("Lo siento Rafael, no pude generar la receta. Inténtalo de nuevo.");
+        setRecipe(data.recipe.replace(/[*#]/g, ""));
       }
     } catch (error) {
-      setRecipe("Hubo un error de comunicación con el servidor culinario.");
+      setRecipe("Hubo un error al conectar con ChefIA.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-orange-50 p-4">
-      <header className="max-w-3xl mx-auto text-center py-10">
-        <h1 className="text-5xl font-bold text-orange-800 mb-2">ChefIA</h1>
-        <p className="text-orange-600 text-xl mb-8">Tu Asistente Culinario Personal</p>
-        
-        <div className="bg-white p-6 rounded-2xl shadow-lg border border-orange-100">
+    <div className="min-h-screen bg-[#FDF7F2] font-sans">
+      <div className="max-w-4xl mx-auto p-6">
+        <header className="text-center mb-10">
+          <h1 className="text-4xl font-serif text-[#1A2E35] mb-2">ChefIA</h1>
+          <p className="text-[#5B7078]">¿Qué cocinamos hoy?</p>
+        </header>
+
+        <div className="bg-white rounded-2xl shadow-sm p-8 mb-8 border border-gray-100">
           <textarea 
-            className="w-full p-4 border-2 border-orange-50 rounded-xl focus:border-orange-500 outline-none text-gray-700"
+            className="w-full text-lg border-none focus:ring-0 placeholder-gray-300 resize-none"
             rows={4}
             value={prompt} 
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="¿Qué ingredientes tienes o qué receta buscas? (Ej: Receta de alfajores de maicena)"
+            placeholder="Describe tus antojos o usa la cámara..."
           />
-          <button 
-            onClick={generateRecipe} 
-            disabled={loading}
-            className={`mt-4 w-full py-4 rounded-xl text-white font-bold text-lg shadow-md transition ${
-              loading ? 'bg-orange-300' : 'bg-orange-600 hover:bg-orange-700'
-            }`}
-          >
-            {loading ? 'Preparando receta...' : 'Generar Receta'}
-          </button>
+          <div className="flex justify-center mt-6">
+            <button 
+              onClick={generateRecipe} 
+              disabled={loading}
+              className="bg-[#FF5C00] hover:bg-[#E65300] text-white px-10 py-3 rounded-xl font-bold transition-all shadow-lg"
+            >
+              {loading ? 'Generando...' : 'Generar Receta'}
+            </button>
+          </div>
         </div>
 
         {recipe && (
-          <div className="mt-8 p-8 bg-white rounded-2xl shadow-md text-left border-l-8 border-orange-500">
-            <div className="prose max-w-none text-gray-800 whitespace-pre-wrap">
+          <div className="bg-white rounded-2xl shadow-sm overflow-hidden flex border border-gray-100">
+            <div className="w-2 bg-[#FF5C00]"></div> {/* La esencia: barra lateral naranja */}
+            <div className="p-8 text-[#2C3E50] leading-relaxed whitespace-pre-wrap w-full">
               {recipe}
             </div>
           </div>
         )}
-      </header>
+      </div>
     </div>
   );
 }
