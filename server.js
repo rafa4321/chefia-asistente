@@ -11,7 +11,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 10000;
 
-// Configuración de Vertex AI - Cambiado a us-central1 para mayor estabilidad
+// Configuración robusta de Vertex AI
 const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
 const vertexAI = new VertexAI({ 
   project: credentials.project_id, 
@@ -19,15 +19,15 @@ const vertexAI = new VertexAI({
   googleAuthOptions: { credentials } 
 });
 
-// Modelo de Texto: Gemini 2.0 Flash Lite (Rápido y Universal)
+// Modelo de Texto: Gemini 2.0 Flash Lite (Respuesta instantánea)
 const textModel = vertexAI.getGenerativeModel({
   model: 'gemini-2.0-flash-lite-001',
   systemInstruction: {
-    parts: [{ text: "Eres ChefIA Pro, un asistente culinario experto. Saluda cordialmente. Crea recetas gourmet en ESPAÑOL. Estructura: Título, Tiempo, Calorías, Ingredientes y Preparación paso a paso. Adapta la receta a las preferencias dietéticas recibidas." }]
+    parts: [{ text: "Eres ChefIA Pro, un asistente culinario de alta gama. Genera recetas gourmet en ESPAÑOL. Usa un tono elegante. Estructura: Título, Tiempo, Calorías, Ingredientes y Preparación detallada." }]
   }
 });
 
-// Modelo de Imagen: Imagen 3
+// Modelo de Imagen: Imagen 3 (Estándar para evitar errores 404 de versiones experimentales)
 const imageModel = vertexAI.getGenerativeModel({ model: 'imagen-3.0-generate-001' });
 
 app.use(express.json());
@@ -37,34 +37,32 @@ app.post('/api/generate-recipe', async (req, res) => {
   const { prompt, preferences } = req.body;
   
   try {
-    // 1. Generar la Receta (Prioridad)
+    // 1. Generar Receta
     const context = preferences ? ` (Preferencias: ${preferences})` : "";
     const textResult = await textModel.generateContent({
-      contents: [{ role: 'user', parts: [{ text: `Receta profesional para: ${prompt}.${context}` }] }]
+      contents: [{ role: 'user', parts: [{ text: `Receta de autor para: ${prompt}.${context}` }] }]
     });
     const recipeText = textResult.response.candidates[0].content.parts[0].text;
 
-    // 2. Intento de Imagen (Blindado: si falla por cuota, imageData queda null)
+    // 2. Intento de Imagen con blindaje (Si falla 429 o 404, devuelve null)
     let imageData = null;
     try {
       const imageResult = await imageModel.generateContent({
-        contents: [{ role: 'user', parts: [{ text: `Gourmet food plating of ${prompt}, high resolution, cinematic lighting.` }] }]
+        contents: [{ role: 'user', parts: [{ text: `Professional gourmet food photography of ${prompt}, cinematic lighting, high resolution, minimalist plating.` }] }]
       });
       if (imageResult.response.candidates[0].content.parts[0].inlineData) {
         imageData = `data:image/png;base64,${imageResult.response.candidates[0].content.parts[0].inlineData.data}`;
       }
-    } catch (imgErr) {
-      console.warn("Imagen omitida por límites de cuota (429/404).");
+    } catch (imgError) {
+      console.warn("Imagen omitida por límites de cuota de Google.");
     }
 
     res.json({ recipe: recipeText, image: imageData });
-
   } catch (error) {
-    console.error("Error en servidor:", error);
-    res.status(500).json({ error: 'No se pudo generar la receta.' });
+    console.error("Error crítico:", error);
+    res.status(500).json({ error: 'Error en la cocina central.' });
   }
 });
 
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'dist', 'index.html')));
-
 app.listen(port, () => console.log(`ChefIA Pro operativo en puerto ${port}`));
