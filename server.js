@@ -14,7 +14,7 @@ const port = process.env.PORT || 10000;
 const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
 const vertexAI = new VertexAI({ project: 'chefia-5b6ac', location: 'us-east1', googleAuthOptions: { credentials } });
 
-// Modelo de Texto: Gemini 2.0 Flash Lite (Estable y en Español)
+// Modelo de Texto
 const textModel = vertexAI.getGenerativeModel({
   model: 'gemini-2.0-flash-lite-001',
   systemInstruction: {
@@ -22,8 +22,8 @@ const textModel = vertexAI.getGenerativeModel({
   }
 });
 
-// Modelo de Imagen: Imagen 3 (Cambiado de 'preview' a versión estable 006)
-const imageModel = vertexAI.getPreviewGenerativeModel({
+// Modelo de Imagen (Corregido aquí)
+const imageModel = vertexAI.getGenerativeModel({
   model: 'image-generation-006',
 });
 
@@ -34,7 +34,6 @@ app.post('/api/generate-recipe', async (req, res) => {
   try {
     const { prompt } = req.body;
 
-    // Ejecución paralela de texto e imagen fotorrealista
     const [textResult, imageResult] = await Promise.all([
       textModel.generateContent({ contents: [{ role: 'user', parts: [{ text: prompt }] }] }),
       imageModel.generateContent({ 
