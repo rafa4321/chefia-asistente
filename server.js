@@ -14,17 +14,17 @@ const port = process.env.PORT || 10000;
 const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
 const vertexAI = new VertexAI({ project: 'chefia-5b6ac', location: 'us-east1', googleAuthOptions: { credentials } });
 
-// Modelo para TEXTO: Gemini 2.0 Flash Lite
+// Modelo de Texto: Gemini 2.0 Flash Lite (Estable y en Español)
 const textModel = vertexAI.getGenerativeModel({
   model: 'gemini-2.0-flash-lite-001',
   systemInstruction: {
-    parts: [{ text: "Eres ChefIA, asistente de Rafael. Responde SIEMPRE en español. Estructura: Saludo, Ingredientes y Preparación." }]
+    parts: [{ text: "Eres ChefIA Pro, el asistente culinario de Rafael. Responde siempre en español. Estructura las recetas con elegancia: Introducción, Ingredientes y Preparación detallada." }]
   }
 });
 
-// Modelo para IMAGEN: Gemini 3.1 Flash Image Preview
-const imageModel = vertexAI.getGenerativeModel({
-  model: 'gemini-3.1-flash-image-preview',
+// Modelo de Imagen: Imagen 3 (Cambiado de 'preview' a versión estable 006)
+const imageModel = vertexAI.getPreviewGenerativeModel({
+  model: 'image-generation-006',
 });
 
 app.use(express.json());
@@ -34,11 +34,11 @@ app.post('/api/generate-recipe', async (req, res) => {
   try {
     const { prompt } = req.body;
 
-    // Generamos ambos contenidos en paralelo para ahorrar tiempo
+    // Ejecución paralela de texto e imagen fotorrealista
     const [textResult, imageResult] = await Promise.all([
       textModel.generateContent({ contents: [{ role: 'user', parts: [{ text: prompt }] }] }),
       imageModel.generateContent({ 
-        contents: [{ role: 'user', parts: [{ text: `Professional food photography of ${prompt}, high resolution, delicious.` }] }] 
+        contents: [{ role: 'user', parts: [{ text: `Professional food photography, delicious ${prompt}, high resolution, cinematic lighting, 8k.` }] }] 
       })
     ]);
 
@@ -51,13 +51,11 @@ app.post('/api/generate-recipe', async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error:", error);
-    res.status(500).json({ error: 'Error en la generación' });
+    console.error("ERROR EN GENERACIÓN:", error.message);
+    res.status(500).json({ error: 'Error en la conexión con la inteligencia culinaria' });
   }
 });
 
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-});
+app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'dist', 'index.html')));
 
-app.listen(port, () => console.log(`ChefIA Multimodal en puerto ${port}`));
+app.listen(port, () => console.log(`ChefIA Pro funcionando en puerto ${port}`));
