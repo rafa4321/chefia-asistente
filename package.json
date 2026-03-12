@@ -1,34 +1,22 @@
 {
-  "name": "chefia-asistente",
-  "private": true,
+  "name": "chefia-pro",
   "version": "1.0.0",
+  "description": "Asistente de Cocina Gourmet con IA",
   "type": "module",
+  "main": "server.js",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
     "start": "node server.js",
-    "clean": "rd /s /q dist",
-    "preview": "vite preview"
+    "build": "npm install && npm run build --prefix frontend && cp -r frontend/dist .",
+    "dev": "node server.js"
   },
   "dependencies": {
-    "@google-cloud/vertexai": "^1.10.0",
-    "clsx": "^2.1.1",
+    "@google/generative-ai": "^0.21.0",
     "dotenv": "^16.4.5",
-    "express": "^4.21.2",
-    "framer-motion": "^11.11.17",
-    "html-to-image": "^1.11.13",
-    "lucide-react": "^0.454.0",
-    "motion": "^11.11.17",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-markdown": "^9.0.1",
-    "tailwind-merge": "^2.5.4",
-    "vite": "^5.4.10"
+    "express": "^4.19.2",
+    "path": "^0.12.7",
+    "url": "^0.11.3"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.0.0",
-    "@types/node": "^22.14.0",
-    "@vitejs/plugin-react": "^4.3.3",
-    "typescript": "~5.5.0"
+    "nodemon": "^3.1.0"
   }
 }

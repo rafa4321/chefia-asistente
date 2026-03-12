@@ -1,0 +1,223 @@
+import 'package:flutter/material.dart';
+import 'services/api_service.dart';
+
+// Entry point of the application
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Chef & Nutricionista AI',
+      theme: ThemeData(
+        useMaterial3: true,
+        colorSchemeSeed: Colors.green, // Visual style for health and nutrition
+        brightness: Brightness.light,
+      ),
+      home: const HomeScreen(),
+    );
+  }
+}
+
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  List<RecipeResult> _recipes = [];
+  bool _isLoading = false;
+
+  // Search function that calls the API service
+  void _handleSearch() async {
+    final query = _searchController.text.trim();
+    if (query.isEmpty) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final results = await searchRecipes(query);
+      setState(() {
+        _recipes = results;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("🍳 Chef & Nutricionista AI"),
+        centerTitle: true,
+        elevation: 2,
+      ),
+      body: Column(
+        children: [
+          // Main search bar
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: "Ej: Almuerzo Keto de \$10, 500 cal, sin gluten",
+                prefixIcon: const Icon(Icons.restaurant_menu),
+                suffixIcon: IconButton(
+                  onPressed: _handleSearch,
+                  icon: const Icon(Icons.send_rounded, color: Colors.green),
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                filled: true,
+                fillColor: Colors.grey[100],
+              ),
+              onSubmitted: (_) => _handleSearch(),
+            ),
+          ),
+          
+          // Loading indicator
+          if (_isLoading) const LinearProgressIndicator(),
+          
+          // Results list
+          Expanded(
+            child: _recipes.isEmpty && !_isLoading
+                ? const Center(
+                    child: Text(
+                      "Escribe tus requerimientos culinarios,\nnutricionales o de presupuesto arriba.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey, fontSize: 16),
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: _recipes.length,
+                    itemBuilder: (context, index) => RecipeCard(recipe: _recipes[index]),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class RecipeCard extends StatelessWidget {
+  final RecipeResult recipe;
+  const RecipeCard({super.key, required this.recipe});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: ExpansionTile(
+        leading: const Icon(Icons.set_meal, color: Colors.green, size: 30),
+        title: Text(
+          recipe.title,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
+        subtitle: Text(
+          "${recipe.calories} | ${recipe.dietType} | ${recipe.estimatedPrice}",
+          style: TextStyle(color: Colors.grey[700]),
+        ),
+        childrenPadding: const EdgeInsets.all(16),
+        expandedAlignment: Alignment.topLeft,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // General description
+              Text(
+                recipe.description,
+                style: const TextStyle(fontStyle: FontStyle.italic, color: Colors.black87),
+              ),
+              const Divider(height: 25),
+
+              // Nutritional info and notes
+              _buildHeader("📊 Ficha Nutricional"),
+              Text("Calorías: ${recipe.calories}"),
+              Text("Macronutrientes: ${recipe.macros['proteinas'] ?? 'N/A'} Prot, ${recipe.macros['carbohidratos'] ?? 'N/A'} Carb, ${recipe.macros['grasas'] ?? 'N/A'} Grasas"),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.green[50],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  "Nota: ${recipe.nutritionalNotes}",
+                  style: const TextStyle(fontSize: 13, color: Colors.green),
+                ),
+              ),
+              const SizedBox(height: 15),
+
+              // Ingredients with weight and price
+              _buildHeader("🛒 Ingredientes (Pesos y Costos)"),
+              ...recipe.ingredients.map((item) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text("• $item", style: const TextStyle(fontSize: 15)),
+                  )),
+              const SizedBox(height: 15),
+
+              // Step-by-step instructions
+              _buildHeader("👨‍🍳 Instrucciones de Preparación"),
+              ...recipe.instructions.asMap().entries.map((entry) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("${entry.key + 1}. ", style: const TextStyle(fontWeight: FontWeight.bold)),
+                        Expanded(child: Text(entry.value)),
+                      ],
+                    ),
+                  )),
+              
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  "Tiempo est.: ${recipe.prepTime}",
+                  style: const TextStyle(fontWeight: FontWeight.w500, color: Colors.orange),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper widget for section headers
+  Widget _buildHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 16,
+          color: Colors.green,
+        ),
+      ),
+    );
+  }
+}
