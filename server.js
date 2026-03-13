@@ -13,11 +13,10 @@ const port = process.env.PORT || 10000;
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// Imágenes de respaldo profesional
+// Banco de imágenes de respaldo para evitar el Error 500 visual
 const gourmetFallbacks = {
   pollo: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&q=80&w=1000",
   carne: "https://images.unsplash.com/photo-1546241072-48010ad28c2c?auto=format&fit=crop&q=80&w=1000",
-  pescado: "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&q=80&w=1000",
   default: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&q=80&w=1000"
 };
 
@@ -27,27 +26,27 @@ app.use(express.static(path.join(__dirname, 'dist')));
 app.post('/api/generate-recipe', async (req, res) => {
   const { prompt, preferences } = req.body;
   try {
+    // Generación de texto
     const textModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     const textResult = await textModel.generateContent(`ChefIA Pro: Receta para ${prompt}. Dieta: ${preferences}`);
     const recipeText = textResult.response.text();
 
+    // Generación de imagen con protección contra fallos
     let imageUrl = null;
     try {
       const imgModel = genAI.getGenerativeModel({ model: "imagen-3.0-generate-001" });
-      const imgResult = await imgModel.generateContent(`Gourmet photography of ${prompt}`);
+      const imgResult = await imgModel.generateContent(`Gourmet photo of ${prompt}`);
       if (imgResult.response?.candidates?.[0]?.content?.parts?.[0]?.inlineData) {
         imageUrl = `data:image/png;base64,${imgResult.response.candidates[0].content.parts[0].inlineData.data}`;
       }
     } catch (e) {
-      // Si falla la imagen, buscamos en el respaldo
-      const p = prompt.toLowerCase();
-      imageUrl = p.includes("pollo") ? gourmetFallbacks.pollo : 
-                 p.includes("carne") ? gourmetFallbacks.carne : 
-                 p.includes("pescado") ? gourmetFallbacks.pescado : gourmetFallbacks.default;
+      // Si la IA falla, usamos respaldo para no enviar Error 500
+      imageUrl = prompt.toLowerCase().includes("pollo") ? gourmetFallbacks.pollo : gourmetFallbacks.default;
     }
+
     res.json({ recipe: recipeText, image: imageUrl });
   } catch (err) {
-    res.status(500).json({ error: "Fallo en el servidor" });
+    res.status(500).json({ error: "Fallo crítico en el servidor" });
   }
 });
 
