@@ -1,67 +1,53 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { useState } from 'react';
+import './App.css';
 
-// Cargar variables de entorno
-dotenv.config();
+function App() {
+  const [ingredients, setIngredients] = useState('');
+  const [recipe, setRecipe] = useState('');
+  const [loading, setLoading] = useState(false);
 
-const app = express();
-
-// Middlewares
-app.use(cors());
-app.use(express.json());
-
-// Configuración de Google AI con la clave de Render
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-// Ruta para generar recetas
-app.post('/api/generate-recipe', async (req, res) => {
-    const { ingredients } = req.body;
-
-    // Validación de entrada
-    if (!ingredients || ingredients.trim() === "") {
-        return res.status(400).json({ error: "Por favor, escribe algunos ingredientes." });
-    }
-
+  const generateRecipe = async () => {
+    if (!ingredients) return alert("Escribe algo primero");
+    
+    setLoading(true);
     try {
-        console.log("Iniciando generación de receta para:", ingredients);
+      // IMPORTANTE: Esta es la URL de tu servidor en Render
+      const response = await fetch('https://chefia-asistente.onrender.com/api/generate-recipe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ingredients })
+      });
 
-        // Usamos el modelo gemini-1.5-flash
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-        const prompt = `Eres ChefIA, un asistente culinario experto. 
-        Crea una receta detallada usando estos ingredientes: ${ingredients}.
-        La respuesta debe incluir:
-        1. Un nombre creativo para el plato.
-        2. Tiempo de preparación.
-        3. Lista de ingredientes con medidas.
-        4. Pasos de preparación claros y numerados.
-        Formato: Profesional y fácil de leer.`;
-
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
-
-        console.log("Receta generada con éxito");
-        res.json({ recipe: text });
-
+      const data = await response.json();
+      if (data.recipe) {
+        setRecipe(data.recipe);
+      } else {
+        setRecipe("Hubo un problema con la respuesta.");
+      }
     } catch (error) {
-        console.error("DETALLE DEL ERROR EN EL SERVIDOR:", error.message);
-        res.status(500).json({ 
-            error: "Error interno en la cocina de ChefIA.",
-            details: error.message 
-        });
+      console.error(error);
+      setRecipe("Error: No se pudo conectar con el servidor.");
+    } finally {
+      setLoading(false);
     }
-});
+  };
 
-// Ruta de salud
-app.get('/health', (req, res) => {
-    res.send("ChefIA Pro está operando correctamente en Render");
-});
+  return (
+    <div className="container">
+      <h1>ChefIA Pro</h1>
+      <textarea 
+        value={ingredients} 
+        onChange={(e) => setIngredients(e.target.value)}
+        placeholder="Ej: Tomate, cebolla, pollo..."
+      />
+      <button onClick={generateRecipe} disabled={loading}>
+        {loading ? "Cocinando..." : "Generar Receta"}
+      </button>
+      <div className="result">
+        {recipe}
+      </div>
+    </div>
+  );
+}
 
-// Puerto dinámico para Render
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`>>> ChefIA Pro en línea y escuchando en puerto ${PORT}`);
-});
+export default App;
