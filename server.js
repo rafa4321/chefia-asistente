@@ -1,66 +1,69 @@
 import express from 'express';
 import cors from 'cors';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import 'dotenv/config';
+import dotenv from 'dotenv';
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+// Cargar variables de entorno
+dotenv.config();
 
 const app = express();
 
-// Configuración de Seguridad y CORS
+// Middlewares
 app.use(cors());
 app.use(express.json());
 
-// Verificación de la API Key
-const apiKey = process.env.GEMINI_API_KEY;
-if (!apiKey) {
-    console.error("CRÍTICO: No se encontró GEMINI_API_KEY en las variables de entorno.");
-}
+// Configuración de Google AI con la clave de Render
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-const genAI = new GoogleGenerativeAI(apiKey);
-
-// Ruta principal para generar recetas
+// Ruta para generar recetas
 app.post('/api/generate-recipe', async (req, res) => {
     const { ingredients } = req.body;
 
+    // Validación de entrada
     if (!ingredients || ingredients.trim() === "") {
-        return res.status(400).json({ error: "Por favor, ingresa algunos ingredientes." });
+        return res.status(400).json({ error: "Por favor, escribe algunos ingredientes." });
     }
 
     try {
-        console.log("Procesando receta para:", ingredients);
+        console.log("Iniciando generación de receta para:", ingredients);
 
+        // Usamos el modelo más rápido y estable para móviles
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-        const prompt = `Eres un chef experto. Crea una receta creativa con estos ingredientes: ${ingredients}. 
-        Formatea la respuesta con:
-        1. Nombre del plato (en negrita)
-        2. Tiempo estimado
-        3. Lista de ingredientes con cantidades
-        4. Instrucciones numeradas paso a paso.
-        Usa un tono amable y profesional.`;
+        const prompt = `Eres ChefIA, un asistente culinario experto. 
+        Crea una receta detallada usando estos ingredientes: ${ingredients}.
+        La respuesta debe incluir:
+        1. Un nombre creativo para el plato.
+        2. Tiempo de preparación.
+        3. Lista de ingredientes con medidas.
+        4. Pasos de preparación claros y numerados.
+        Formato: Profesional y fácil de leer.`;
 
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const text = response.text();
 
-        console.log("¡Receta generada con éxito!");
+        console.log("Receta generada con éxito");
         res.json({ recipe: text });
 
     } catch (error) {
-        console.error("FALLO EN LA COMUNICACIÓN CON GEMINI:", error.message);
+        // Este log aparecerá en Render para decirnos exactamente qué falló
+        console.error("DETALLE DEL ERROR EN EL SERVIDOR:", error.message);
+        
         res.status(500).json({ 
-            error: "Hubo un problema al cocinar tu receta.",
+            error: "Error interno en la cocina de ChefIA.",
             details: error.message 
         });
     }
 });
 
-// Ruta de salud
+// Ruta de prueba para verificar que el servidor está vivo
 app.get('/health', (req, res) => {
-    res.send("Servidor de ChefIA operando correctamente");
+    res.send("ChefIA Pro está operando correctamente en Render");
 });
 
-// Render maneja el puerto
-const PORT = process.env.PORT || 3000;
+// Puerto dinámico para Render
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`ChefIA Pro en línea y escuchando en puerto ${PORT}`);
+    console.log(`>>> ChefIA Pro en línea y escuchando en puerto ${PORT}`);
 });
