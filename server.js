@@ -1,7 +1,7 @@
-const express = require('express');
-const cors = require('cors');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-require('dotenv').config();
+import express from 'express';
+import cors from 'cors';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import 'dotenv/config';
 
 const app = express();
 
@@ -9,7 +9,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Verificación de la API Key antes de arrancar
+// Verificación de la API Key
 const apiKey = process.env.GEMINI_API_KEY;
 if (!apiKey) {
     console.error("CRÍTICO: No se encontró GEMINI_API_KEY en las variables de entorno.");
@@ -21,7 +21,6 @@ const genAI = new GoogleGenerativeAI(apiKey);
 app.post('/api/generate-recipe', async (req, res) => {
     const { ingredients } = req.body;
 
-    // Validación de entrada
     if (!ingredients || ingredients.trim() === "") {
         return res.status(400).json({ error: "Por favor, ingresa algunos ingredientes." });
     }
@@ -29,7 +28,6 @@ app.post('/api/generate-recipe', async (req, res) => {
     try {
         console.log("Procesando receta para:", ingredients);
 
-        // Usamos gemini-1.5-flash: es el modelo más estable y rápido para apps móviles
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
         const prompt = `Eres un chef experto. Crea una receta creativa con estos ingredientes: ${ingredients}. 
@@ -48,7 +46,6 @@ app.post('/api/generate-recipe', async (req, res) => {
         res.json({ recipe: text });
 
     } catch (error) {
-        // Log detallado para que lo veamos en Render si vuelve a fallar
         console.error("FALLO EN LA COMUNICACIÓN CON GEMINI:", error.message);
         res.status(500).json({ 
             error: "Hubo un problema al cocinar tu receta.",
@@ -57,12 +54,12 @@ app.post('/api/generate-recipe', async (req, res) => {
     }
 });
 
-// Ruta de salud para verificar que el servidor vive
+// Ruta de salud
 app.get('/health', (req, res) => {
     res.send("Servidor de ChefIA operando correctamente");
 });
 
-// IMPORTANTE: Render asigna el puerto automáticamente
+// Render maneja el puerto
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`ChefIA Pro en línea y escuchando en puerto ${PORT}`);
