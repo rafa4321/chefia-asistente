@@ -1,53 +1,36 @@
-import { useState } from 'react';
-import './App.css';
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-function App() {
-  const [ingredients, setIngredients] = useState('');
-  const [recipe, setRecipe] = useState('');
-  const [loading, setLoading] = useState(false);
+dotenv.config();
 
-  const generateRecipe = async () => {
-    if (!ingredients) return alert("Escribe algo primero");
-    
-    setLoading(true);
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// CONFIGURACIÓN DE GOOGLE AI
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+app.post('/api/generate-recipe', async (req, res) => {
     try {
-      // IMPORTANTE: Esta es la URL de tu servidor en Render
-      const response = await fetch('https://chefia-asistente.onrender.com/api/generate-recipe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ingredients })
-      });
-
-      const data = await response.json();
-      if (data.recipe) {
-        setRecipe(data.recipe);
-      } else {
-        setRecipe("Hubo un problema con la respuesta.");
-      }
+        const { ingredients } = req.body;
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        
+        const result = await model.generateContent(`ChefIA: Crea una receta con ${ingredients}`);
+        const response = await result.response;
+        
+        res.json({ recipe: response.text() });
     } catch (error) {
-      console.error(error);
-      setRecipe("Error: No se pudo conectar con el servidor.");
-    } finally {
-      setLoading(false);
+        console.error("Error raíz:", error.message);
+        res.status(500).json({ error: "Fallo de conexión con Google AI Studio" });
     }
-  };
+});
 
-  return (
-    <div className="container">
-      <h1>ChefIA Pro</h1>
-      <textarea 
-        value={ingredients} 
-        onChange={(e) => setIngredients(e.target.value)}
-        placeholder="Ej: Tomate, cebolla, pollo..."
-      />
-      <button onClick={generateRecipe} disabled={loading}>
-        {loading ? "Cocinando..." : "Generar Receta"}
-      </button>
-      <div className="result">
-        {recipe}
-      </div>
-    </div>
-  );
-}
+// Ruta simple para verificar que el servidor está VIVO
+app.get('/health', (req, res) => res.send("Servidor Activo"));
 
-export default App;
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`>>> ChefIA Pro en línea y escuchando en puerto ${PORT}`);
+});
