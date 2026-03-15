@@ -1,54 +1,69 @@
-import express from 'express';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import dotenv from 'dotenv';
+const express = require('express');
+const cors = require('cors');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+require('dotenv').config();
 
-dotenv.config();
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 const app = express();
-const port = process.env.PORT || 10000;
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-// Banco de imágenes de respaldo para evitar el Error 500 visual
-const gourmetFallbacks = {
-  pollo: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&q=80&w=1000",
-  carne: "https://images.unsplash.com/photo-1546241072-48010ad28c2c?auto=format&fit=crop&q=80&w=1000",
-  default: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&q=80&w=1000"
-};
-
+// Configuración de Seguridad y CORS
+app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'dist')));
 
+// Verificación de la API Key antes de arrancar
+const apiKey = process.env.GEMINI_API_KEY;
+if (!apiKey) {
+    console.error("CRÍTICO: No se encontró GEMINI_API_KEY en las variables de entorno.");
+}
+
+const genAI = new GoogleGenerativeAI(apiKey);
+
+// Ruta principal para generar recetas
 app.post('/api/generate-recipe', async (req, res) => {
-  const { prompt, preferences } = req.body;
-  try {
-    // Generación de texto
-    const textModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    const textResult = await textModel.generateContent(`ChefIA Pro: Receta para ${prompt}. Dieta: ${preferences}`);
-    const recipeText = textResult.response.text();
+    const { ingredients } = req.body;
 
-    // Generación de imagen con protección contra fallos
-    let imageUrl = null;
-    try {
-      const imgModel = genAI.getGenerativeModel({ model: "imagen-3.0-generate-001" });
-      const imgResult = await imgModel.generateContent(`Gourmet photo of ${prompt}`);
-      if (imgResult.response?.candidates?.[0]?.content?.parts?.[0]?.inlineData) {
-        imageUrl = `data:image/png;base64,${imgResult.response.candidates[0].content.parts[0].inlineData.data}`;
-      }
-    } catch (e) {
-      // Si la IA falla, usamos respaldo para no enviar Error 500
-      imageUrl = prompt.toLowerCase().includes("pollo") ? gourmetFallbacks.pollo : gourmetFallbacks.default;
+    // Validación de entrada
+    if (!ingredients || ingredients.trim() === "") {
+        return res.status(400).json({ error: "Por favor, ingresa algunos ingredientes." });
     }
 
-    res.json({ recipe: recipeText, image: imageUrl });
-  } catch (err) {
-    res.status(500).json({ error: "Fallo crítico en el servidor" });
-  }
+    try {
+        console.log("Procesando receta para:", ingredients);
+
+        // Usamos gemini-1.5-flash: es el modelo más estable y rápido para apps móviles
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+        const prompt = `Eres un chef experto. Crea una receta creativa con estos ingredientes: ${ingredients}. 
+        Formatea la respuesta con:
+        1. Nombre del plato (en negrita)
+        2. Tiempo estimado
+        3. Lista de ingredientes con cantidades
+        4. Instrucciones numeradas paso a paso.
+        Usa un tono amable y profesional.`;
+
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
+
+        console.log("¡Receta generada con éxito!");
+        res.json({ recipe: text });
+
+    } catch (error) {
+        // Log detallado para que lo veamos en Render si vuelve a fallar
+        console.error("FALLO EN LA COMUNICACIÓN CON GEMINI:", error.message);
+        res.status(500).json({ 
+            error: "Hubo un problema al cocinar tu receta.",
+            details: error.message 
+        });
+    }
 });
 
-app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'dist', 'index.html')));
-app.listen(port, () => console.log("ChefIA Pro en línea"));
+// Ruta de salud para verificar que el servidor vive
+app.get('/health', (req, res) => {
+    res.send("Servidor de ChefIA operando correctamente");
+});
+
+// IMPORTANTE: Render asigna el puerto automáticamente
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`ChefIA Pro en línea y escuchando en puerto ${PORT}`);
+});
