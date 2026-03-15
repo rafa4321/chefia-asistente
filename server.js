@@ -27,7 +27,7 @@ app.post('/api/generate-recipe', async (req, res) => {
     try {
         console.log("Iniciando generación de receta para:", ingredients);
 
-        // Usamos el modelo más rápido y estable para móviles
+        // Usamos el modelo gemini-1.5-flash
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
         const prompt = `Eres ChefIA, un asistente culinario experto. 
@@ -47,9 +47,7 @@ app.post('/api/generate-recipe', async (req, res) => {
         res.json({ recipe: text });
 
     } catch (error) {
-        // Este log aparecerá en Render para decirnos exactamente qué falló
         console.error("DETALLE DEL ERROR EN EL SERVIDOR:", error.message);
-        
         res.status(500).json({ 
             error: "Error interno en la cocina de ChefIA.",
             details: error.message 
@@ -57,7 +55,7 @@ app.post('/api/generate-recipe', async (req, res) => {
     }
 });
 
-// Ruta de prueba para verificar que el servidor está vivo
+// Ruta de salud
 app.get('/health', (req, res) => {
     res.send("ChefIA Pro está operando correctamente en Render");
 });
