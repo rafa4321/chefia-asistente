@@ -15,7 +15,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 app.post('/api/generate-recipe', async (req, res) => {
     try {
         const { ingredients } = req.body;
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
         
         const result = await model.generateContent(`ChefIA: Crea una receta con ${ingredients}`);
         const response = await result.response;
