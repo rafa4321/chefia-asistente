@@ -25,7 +25,7 @@ function App() {
     const dietContext = Array.isArray(profile.diet) ? profile.diet.join(', ') : '';
 
     try {
-      const res = await fetch('/api/generate-recipe', {
+      const res = await fetch('https://chefia-asistente.onrender.com/api/generate-recipe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt, preferences: dietContext }),
