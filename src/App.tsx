@@ -11,26 +11,21 @@ function App() {
     setRecipe('');
 
     try {
-      // URL de producción en Render
+      // Conectamos a tu URL de Render
       const res = await fetch('https://chefia-asistente.onrender.com/api/generate-recipe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          prompt: prompt,
-          preferences: "" // Aquí puedes añadir preferencias del perfil si lo deseas
-        }),
+        body: JSON.stringify({ prompt: prompt }),
       });
       
       const data = await res.json();
       
-      if (!res.ok) {
-        throw new Error(data.message || "Error en el servidor");
-      }
+      if (!res.ok) throw new Error(data.message || "Error en el servidor");
       
       setRecipe(data.recipe);
     } catch (err: any) {
-      setRecipe(`Error de conexión: ${err.message}. Verifica que el servidor en Render esté 'Live'.`);
-      console.error("Error en App:", err);
+      setRecipe(`Error: ${err.message}. Revisa los logs de Render.`);
+      console.error("Error Front-End:", err);
     } finally {
       setLoading(false);
     }
@@ -59,7 +54,7 @@ function App() {
         </button>
 
         {recipe && (
-          <div className="mt-12 p-8 bg-white rounded-3xl shadow-inner font-serif text-lg leading-relaxed whitespace-pre-wrap">
+          <div className="mt-12 p-8 bg-white rounded-3xl shadow-inner font-serif text-lg leading-relaxed whitespace-pre-wrap border border-gray-100">
             {recipe}
           </div>
         )}
