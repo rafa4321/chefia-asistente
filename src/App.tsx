@@ -1,31 +1,31 @@
 import React, { useState } from 'react';
 
 function App() {
-  const [prompt, setPrompt] = useState('');
+  const [input, setInput] = useState('');
   const [recipe, setRecipe] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const generate = async () => {
-    if (!prompt) return;
+  const consultarChef = async () => {
+    if (!input.trim()) return;
     setLoading(true);
     setRecipe('');
 
     try {
-      // Conectamos a tu URL de Render
-      const res = await fetch('https://chefia-asistente.onrender.com/api/generate-recipe', {
+      const response = await fetch('https://chefia-asistente.onrender.com/api/generate-recipe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: prompt }),
+        body: JSON.stringify({ prompt: input }),
       });
+
+      const data = await response.json();
       
-      const data = await res.json();
-      
-      if (!res.ok) throw new Error(data.message || "Error en el servidor");
-      
-      setRecipe(data.recipe);
-    } catch (err: any) {
-      setRecipe(`Error: ${err.message}. Revisa los logs de Render.`);
-      console.error("Error Front-End:", err);
+      if (response.ok) {
+        setRecipe(data.recipe);
+      } else {
+        setRecipe(`Aviso: ${data.error || 'No se pudo obtener la receta'}`);
+      }
+    } catch (error) {
+      setRecipe("Error de conexión con el servidor. Verifica tu internet.");
     } finally {
       setLoading(false);
     }
@@ -33,32 +33,39 @@ function App() {
 
   return (
     <div className="min-h-screen bg-[#FDF7F2] text-[#1A2E35] p-6 font-sans">
-      <main className="max-w-xl mx-auto pt-10">
-        <h1 className="text-5xl font-serif italic text-center mb-10">ChefIA Pro</h1>
-        
-        <div className="bg-white rounded-[2.5rem] p-8 shadow-xl mb-6">
+      <div className="max-w-2xl mx-auto pt-10">
+        <header className="text-center mb-10">
+          <h1 className="text-5xl font-serif italic font-bold text-[#1A2E35]">ChefIA Pro</h1>
+          <p className="mt-2 text-gray-600">Tu asistente culinario inteligente</p>
+        </header>
+
+        <div className="bg-white rounded-[2rem] shadow-2xl p-8 mb-6 border border-orange-50">
           <textarea 
-            className="w-full border-none focus:ring-0 text-xl bg-transparent min-h-[150px] outline-none"
-            placeholder="¿Qué vamos a cocinar hoy?"
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
+            className="w-full border-none focus:ring-0 text-xl bg-transparent min-h-[150px] resize-none outline-none"
+            placeholder="¿Qué ingredientes tienes o qué deseas cocinar?"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
           />
         </div>
 
         <button 
-          onClick={generate} 
+          onClick={consultarChef}
           disabled={loading}
-          className="w-full bg-[#1A2E35] text-white py-6 rounded-full font-bold text-xl shadow-lg active:scale-95 transition-all disabled:opacity-50"
+          className={`w-full py-5 rounded-full font-bold text-xl transition-all shadow-lg ${
+            loading ? 'bg-gray-400' : 'bg-[#1A2E35] hover:bg-[#2c4a55] text-white active:scale-95'
+          }`}
         >
-          {loading ? 'Cocinando...' : 'Generar Receta'}
+          {loading ? 'Cocinando tu receta...' : 'CREAR RECETA'}
         </button>
 
         {recipe && (
-          <div className="mt-12 p-8 bg-white rounded-3xl shadow-inner font-serif text-lg leading-relaxed whitespace-pre-wrap border border-gray-100">
-            {recipe}
+          <div className="mt-10 p-8 bg-white rounded-3xl shadow-xl border border-orange-100 animate-fade-in">
+            <div className="prose prose-slate max-w-none whitespace-pre-wrap font-serif text-lg leading-relaxed text-gray-800">
+              {recipe}
+            </div>
           </div>
         )}
-      </main>
+      </div>
     </div>
   );
 }
